@@ -7,16 +7,22 @@
 // ==/UserScript==
 
 var angular = unsafeWindow.angular;
+var body = angular.element('body');
+var $scope = body.scope();
+var template = angular.element('<li>{{user.items.lastDrop.count}}/{{bd_dropCap()}}</li>');
+$scope.bd_dropCap = function() {
+    var level = $scope.user.contributor.level || 0;
+    var stats = $scope.user._statsComputed;
+    return stats ? (5 + Math.floor(stats.per / 25) + level) : '?';
+};
+
+var $compile = body.injector().get('$compile');
+var linkFn = $compile(template);
+var element = linkFn(body.scope());
+angular.element('.toolbar-wallet').prepend(element);
 
 unsafeWindow.buy = function(item) {
     angular.element('body').scope().buy({ key: item });
-};
-
-unsafeWindow.dropCap = function() {
-    var user = angular.element('body').scope().user;
-    var level = user.contributor.level || 0;
-    var dropCap = 5 + Math.floor(user._statsComputed.per / 25) + level;
-    return user.items.lastDrop.count + '/' + dropCap;
 };
 
 unsafeWindow.currentRandom = function() {
