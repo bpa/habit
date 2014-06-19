@@ -6,28 +6,30 @@
 // @copyright  2014+, Bruce Armstrong
 // ==/UserScript==
 
+if (window.top != window.self)  //-- Don't run on frames or iframes
+    return;
+
 var angular = unsafeWindow.angular;
 var body = angular.element('body');
-var $scope = body.scope();
-var template = angular.element('<li>{{user.items.lastDrop.count}}/{{bd_dropCap()}}</li>');
-$scope.bd_dropCap = function() {
-    var level = $scope.user.contributor.level || 0;
-    var stats = $scope.user._statsComputed;
-    return stats ? (5 + Math.floor(stats.per / 25) + level) : '?';
-};
-
+var $scope = body.injector().get('$rootScope');
+//var $scope = body.scope();
+var template = angular.element('<li>{{bdDropMessage}} {{bdDrop}}</li>');
 var $compile = body.injector().get('$compile');
 var linkFn = $compile(template);
 var element = linkFn(body.scope());
 angular.element('.toolbar-wallet').prepend(element);
 
-unsafeWindow.buy = function(item) {
-    angular.element('body').scope().buy({ key: item });
-};
+$scope.$watch(function() { return ($scope.user._statsComputed ? $scope.user._statsComputed.per : 0) + $scope.user.items.lastDrop.count; }, function() {
+    var level = $scope.user.contributor.level || 0;
+    var stats = $scope.user._statsComputed;
+    $scope.bdDropMessage = $scope.user.items.lastDrop.count + '/' + (stats ? (5 + Math.floor(stats.per / 25) + level) : '?');
+});
 
-unsafeWindow.currentRandom = function() {
-    var user = angular.element('body').scope().user;
-    var rarity = user.fns.predictableRandom(user.stats.gp);
+function calculateDropChance () {
+	if ($scope.user.fns.predictableRandom === undefined)
+		$scope.bdDrop = '?';
+
+    var rarity = $scope.user.fns.predictableRandom($scope.user.stats.gp);
     var item = 
           rarity > .60 ? "Food"
     	: rarity > .30 ? "Egg"
@@ -35,5 +37,12 @@ unsafeWindow.currentRandom = function() {
         : rarity < .09 ? "Zombie, CottonCandyPink, or CottonCandyBlue Potion"
         : rarity < .18 ? "Red, Shade, or Skeleton Potion"
         : "Base, White, or Desert Potion";
-    return rarity.toFixed(4) + " => " + item;
+    $scope.bdDrop = rarity.toFixed(3) + " => " + item;
 };
+
+$scope.$watch(function() { return $scope.user.stats.gp }, calculateDropChance);
+
+unsafeWindow.buy = function(item) {
+    angular.element('body').scope().buy({ key: item });
+};
+
